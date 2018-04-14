@@ -52,7 +52,7 @@ void *producer(void *arg) {
     sem_wait(&empty);
     sem_wait(&mutex);
     put(base + i);
-    printf("%d %s %d\n", id, "Produced:",tmp);
+    printf("%d %s %d\n", id, "Produced:", base + i);
     sem_post(&mutex);
     sem_post(&full);
   }
