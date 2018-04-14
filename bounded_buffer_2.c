@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
   queue for however many consumers exist.
   */
   int s;
-  for (int s = 0; s < num_consumers; s++) {
+  for (s = 0; s < num_consumers; s++) {
     sem_wait(&empty);
     sem_wait(&mutex);
     put(-2);
