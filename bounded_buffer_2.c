@@ -21,10 +21,6 @@ sem_t empty;
 sem_t full;
 sem_t mutex;
 
-// Used for appending the end of data variable
-pthread_cond_t *fill_cv = &fill;
-pthread_cond_t *empty_cv = &empty;
-
 void ensure(int expression, char *msg) {
   if (expression == 0) {
   	fprintf(stderr, "%s\n", msg);
