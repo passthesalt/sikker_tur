@@ -102,19 +102,21 @@ int main(int argc, char *argv[]) {
 
   pthread_t pid[num_producers], cid[num_consumers];
   int thread_id = 0;
-  for (int i = 0; i < num_producers; i++) {
-  	pthread_create(&pid[i], NULL, producer, (void *) (long long) thread_id);
+  int g;
+  for (g = 0; g < num_producers; g++) {
+  	pthread_create(&pid[g], NULL, producer, (void *) (long long) thread_id);
   	thread_id++;
   }
-  for (int i = 0; i < num_consumers; i++) {
+  int i;
+  for (i = 0; i < num_consumers; i++) {
   	pthread_create(&cid[i], NULL, consumer, (void *) (long long) thread_id);
   	thread_id++;
   }
-
-  for (int i = 0; i < num_producers; i++) {
-  	pthread_join(pid[i], NULL);
+  int k;
+  for (k = 0; k < num_producers; k++) {
+  	pthread_join(pid[k], NULL);
     p_flag = 1;
-    printf("%s %d %s\n", "Producer thread", (int) pid[i],"joined.");
+    printf("%s %d %s\n", "Producer thread", (int) pid[k],"joined.");
   }
 
   /*
@@ -122,7 +124,8 @@ int main(int argc, char *argv[]) {
   no further data produced, an end of data variable (-2) is appended to the
   queue for however many consumers exist.
   */
-  for (int i = 0; i < num_consumers; i++) {
+  int s;
+  for (int s = 0; s < num_consumers; s++) {
     sem_wait(&empty);
     sem_wait(&mutex);
     put(-2);
@@ -130,9 +133,10 @@ int main(int argc, char *argv[]) {
     sem_post(&full);
   }
 
-  for (int i = 0; i < num_consumers; i++) {
-  	pthread_join(cid[i], NULL);
-    printf("%s %d %s\n", "Consumer thread", (int) cid[i],"joined.");
+  int t;
+  for (t = 0; t < num_consumers; t++) {
+  	pthread_join(cid[t], NULL);
+    printf("%s %d %s\n", "Consumer thread", (int) cid[t],"joined.");
   }
 
   return 0;
