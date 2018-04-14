@@ -107,16 +107,17 @@ int main(int argc, char *argv[]) {
 
   pthread_t pid[num_producers], cid[num_consumers];
   int thread_id = 0;
-  for (int i = 0; i < num_producers; i++) {
+  int i;
+  for (i = 0; i < num_producers; i++) {
   	pthread_create(&pid[i], NULL, producer, (void *) (long long) thread_id);
   	thread_id++;
   }
-  for (int i = 0; i < num_consumers; i++) {
+  for (i = 0; i < num_consumers; i++) {
   	pthread_create(&cid[i], NULL, consumer, (void *) (long long) thread_id);
   	thread_id++;
   }
 
-  for (int i = 0; i < num_producers; i++) {
+  for (i = 0; i < num_producers; i++) {
   	pthread_join(pid[i], NULL);
     p_flag = 1;
     printf("%s %d %s\n", "Producer thread", (int) pid[i],"joined.");
@@ -127,7 +128,7 @@ int main(int argc, char *argv[]) {
   no further data produced, an end of data variable (-2) is appended to the
   queue for however many consumers exist.
   */
-  for (int i = 0; i < num_consumers; i++) {
+  for (i = 0; i < num_consumers; i++) {
     pthread_mutex_lock(&m);
   	while (num_entries == buffer_size)
   	    pthread_cond_wait(empty_cv, &m);
@@ -136,7 +137,7 @@ int main(int argc, char *argv[]) {
   	pthread_mutex_unlock(&m);
   }
 
-  for (int i = 0; i < num_consumers; i++) {
+  for (i = 0; i < num_consumers; i++) {
   	pthread_join(cid[i], NULL);
     printf("%s %d %s\n", "Consumer thread", (int) cid[i],"joined.");
   }
