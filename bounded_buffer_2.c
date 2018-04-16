@@ -13,6 +13,7 @@ int num_consumers = 1;
 int prod_ptr = 0;                  // Points to the index at which a newly produced item is inserted
 int cons_ptr = 0;                  // Points to the index at which an item is to be consumed
 int p_flag = 0;
+int loop = 0;
 
 int* buffer;
 
@@ -28,10 +29,13 @@ void ensure(int expression, char *msg) {
   }
 }
 
-void put(int value) {
+void put(int value, int id) {
   ensure(buffer[prod_ptr] == -1, "ERROR: tried to fill a non-empty buffer");
   buffer[prod_ptr] = value;
   prod_ptr = (prod_ptr + 1) % buffer_size;  // Modding ptr by buffer size alleviates the need to bound the ptr to the size of the buffer
+  if (value != -2)
+    printf("%d %s %d\n", id, "Produced:", value);
+  loop++;
 }
 
 int get() {
@@ -39,6 +43,8 @@ int get() {
   ensure(tmp != -1, "ERROR: tried to get an empty buffer");   // Make sure that the value is not -1 (signifies empty entry in buffer)
   buffer[cons_ptr] = -1;                                      // Render the value at the idx pointed to by cons ptr -1, value signifying empty
   cons_ptr = (cons_ptr + 1) % buffer_size;                    // Advance the cons ptr
+  if (tmp != -2)
+    printf("%d %s %d\n", id, "Consumed:",tmp);
 
   return tmp;                                                 // Return tmp
 }
@@ -46,13 +52,12 @@ int get() {
 void *producer(void *arg) {
   int id = (int) arg;
 
-  int base = id * num_loops;
   int i;
-  for (i = 0; i < num_loops; i++) {         //p0: Run for the specified number of loops
+  while (loop < num_loops) {         //p0: Run for the specified number of loops
     sem_wait(&empty);
     sem_wait(&mutex);
-    put(base + i);
-    printf("%d %s %d\n", id, "Produced:", base + i);
+    if (loop < num_loops)
+      put(loop, id);
     sem_post(&mutex);
     sem_post(&full);
   }
@@ -71,8 +76,6 @@ void *consumer(void *arg) {
     tmp = get();
     sem_post(&mutex);
     sem_post(&empty);
-    if (tmp != -2)
-      printf("%d %s %d\n", id, "Consumed:",tmp);
   }
 
   return NULL;
@@ -129,7 +132,7 @@ int main(int argc, char *argv[]) {
   for (s = 0; s < num_consumers; s++) {
     sem_wait(&empty);
     sem_wait(&mutex);
-    put(-2);
+    put(-2, -2);
     sem_post(&mutex);
     sem_post(&full);
   }

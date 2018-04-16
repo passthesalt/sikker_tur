@@ -22,6 +22,7 @@ int* buffer;
 pthread_cond_t empty  = PTHREAD_COND_INITIALIZER;
 pthread_cond_t fill   = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t m     = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t l     = PTHREAD_MUTEX_INITIALIZER;
 
 // Used for appending the end of data variable
 pthread_cond_t *fill_cv = &fill;
@@ -34,34 +35,38 @@ void ensure(int expression, char *msg) {
   }
 }
 
-void do_fill(int value) {
+void do_fill(int value, int id) {
   ensure(buffer[prod_ptr] == -1, "ERROR: tried to fill a non-empty buffer");
   buffer[prod_ptr] = value;
   prod_ptr = (prod_ptr + 1) % buffer_size;  // Modding ptr by buffer size alleviates the need to bound the ptr to the size of the buffer
+  if (value != -2)
+    printf("%d %s %d\n", id, "Produced:", loop);
+  loop++;
   num_entries++;
 }
 
-int do_get() {
+int do_get(int id) {
   int tmp = buffer[cons_ptr];                                 // Store the value to be consumed at the idx pointed to by the cons ptr in tmp
   ensure(tmp != -1, "ERROR: tried to get an empty buffer");   // Make sure that the value is not -1 (signifies empty entry in buffer)
   buffer[cons_ptr] = -1;                                      // Render the value at the idx pointed to by cons ptr -1, value signifying empty
   cons_ptr = (cons_ptr + 1) % buffer_size;                    // Advance the cons ptr
   num_entries--;                                              // Decrement the number of num_entries
+  if (tmp != -2)
+    printf("%d %s %d\n", id, "Consumed:",tmp);
+
   return tmp;                                                 // Return tmp
 }
 
 void *producer(void *arg) {
   int id = (int) arg;
 
-  int base = id * num_loops;
-  while (loop < num_loops-1) {              //p0: Run for the specified number of loops
-  	pthread_mutex_lock(&m);                 //p1: Obtain lock before entering critical section (only the thread with the lock will be in cs.)
+  while (loop < num_loops) {              //p0: Run for the specified number of loops
+    pthread_mutex_lock(&m);                 //p1: Obtain lock before entering critical section (only the thread with the lock will be in cs.)
   	while (num_entries == buffer_size) {    //p2: Check if # of entries is equal to buff_size (buff is full), if so, then wait for empty
   	    pthread_cond_wait(&empty, &m);      //p3: Wait/block until the buffer is empty
   	}
-  	do_fill(base + loop);                   //p4: Once buffer is empty, call do_fill to enter value into buffer (value is base + i)
-    printf("%d %s %d\n", id, "Produced:", base + loop);
-    loop++;
+    if (loop < num_loops)
+      do_fill(loop, id);                          //p4: Once buffer is empty, call do_fill to enter value into buffer (value is base + i)
     pthread_cond_signal(&fill);             //p5: Once the buffer is filled, signal that it has been filled.
   	pthread_mutex_unlock(&m);               //p6: Release the lock
   }
@@ -79,11 +84,9 @@ void *consumer(void *arg) {
   	while (num_entries == 0) {              //c2: Check if empty, if so, then wait
 	    pthread_cond_wait(&fill, &m);         //c3: Wait for the buffer to be filled
     }
-  	tmp = do_get();                         //c4: Once buffer is filled, consume
+  	tmp = do_get(id);                         //c4: Once buffer is filled, consume
   	pthread_cond_signal(&empty);            //c5: Signal that buffer contents have been consumed and buff is now empty
   	pthread_mutex_unlock(&m);               //c6: Release the lock
-    if (tmp != -2)
-      printf("%d %s %d\n", id, "Consumed:",tmp);
   }
 
   return NULL;
@@ -134,7 +137,7 @@ int main(int argc, char *argv[]) {
     pthread_mutex_lock(&m);
   	while (num_entries == buffer_size)
   	    pthread_cond_wait(empty_cv, &m);
-  	do_fill(-2);
+  	do_fill(-2, -2);
   	pthread_cond_signal(fill_cv);
   	pthread_mutex_unlock(&m);
   }
