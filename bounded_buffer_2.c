@@ -38,7 +38,7 @@ void put(int value, int id) {
   loop++;
 }
 
-int get() {
+int get(int id) {
   int tmp = buffer[cons_ptr];                                 // Store the value to be consumed at the idx pointed to by the cons ptr in tmp
   ensure(tmp != -1, "ERROR: tried to get an empty buffer");   // Make sure that the value is not -1 (signifies empty entry in buffer)
   buffer[cons_ptr] = -1;                                      // Render the value at the idx pointed to by cons ptr -1, value signifying empty
@@ -73,7 +73,7 @@ void *consumer(void *arg) {
   while (tmp != -2) {                       //c0: Run while producers are still producing (if they're not, there will be nothing to consume.)
     sem_wait(&full);
     sem_wait(&mutex);
-    tmp = get();
+    tmp = get(id);
     sem_post(&mutex);
     sem_post(&empty);
   }
