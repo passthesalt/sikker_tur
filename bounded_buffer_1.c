@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <time.h>
 
 // Global Variables
 int num_loops = 1;
@@ -13,6 +14,7 @@ int num_entries = 0;               // Number of entries in buffer
 int prod_ptr = 0;                  // Points to the index at which a newly produced item is inserted
 int cons_ptr = 0;                  // Points to the index at which an item is to be consumed
 int p_flag = 0;
+int loop = 0;
 
 int* buffer;
 
@@ -52,14 +54,14 @@ void *producer(void *arg) {
   int id = (int) arg;
 
   int base = id * num_loops;
-  int i;
-  for (i = 0; i < num_loops; i++) {         //p0: Run for the specified number of loops
+  while (loop < num_loops-1) {              //p0: Run for the specified number of loops
   	pthread_mutex_lock(&m);                 //p1: Obtain lock before entering critical section (only the thread with the lock will be in cs.)
   	while (num_entries == buffer_size) {    //p2: Check if # of entries is equal to buff_size (buff is full), if so, then wait for empty
   	    pthread_cond_wait(&empty, &m);      //p3: Wait/block until the buffer is empty
   	}
-  	do_fill(base + i);                      //p4: Once buffer is empty, call do_fill to enter value into buffer (value is base + i)
-    printf("%d %s %d\n", id, "Produced:", base + i);
+  	do_fill(base + loop);                   //p4: Once buffer is empty, call do_fill to enter value into buffer (value is base + i)
+    printf("%d %s %d\n", id, "Produced:", base + loop);
+    loop++;
     pthread_cond_signal(&fill);             //p5: Once the buffer is filled, signal that it has been filled.
   	pthread_mutex_unlock(&m);               //p6: Release the lock
   }
