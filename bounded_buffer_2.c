@@ -41,7 +41,7 @@ void put(int value, int id) {
 
 int get(int id) {
   int tmp = buffer[cons_ptr];                                 // Store the value to be consumed at the idx pointed to by the cons ptr in tmp
-  ensure(tmp == -1, "ERROR: tried to get an empty buffer");   // Make sure that the value is not -1 (signifies empty entry in buffer)
+  ensure(tmp != -1, "ERROR: tried to get an empty buffer");   // Make sure that the value is not -1 (signifies empty entry in buffer)
   buffer[cons_ptr] = -1;                                      // Render the value at the idx pointed to by cons ptr -1, value signifying empty
   cons_ptr = (cons_ptr + 1) % buffer_size;                    // Advance the cons ptr
   if (tmp != -2)
