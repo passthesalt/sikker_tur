@@ -23,7 +23,6 @@ sem_t empty;
 sem_t full;
 sem_t mutex;
 sem_t loop_mutex;
-pthread_mutex_t m     = PTHREAD_MUTEX_INITIALIZER;
 
 void ensure(int expression, char *msg) {
   if (expression == 0) {
@@ -55,21 +54,21 @@ void *producer(void *arg) {
   int id = (int) arg;
 
   int i;
-  while (1) {                         //p0: Run for the specified number of loops
-    sem_wait(&loop_mutex);
-    if (loop < num_loops) {
-      loop++;
-      sem_wait(&empty);
-      sem_wait(&mutex);
-      int r = rand();
-      put(r, id);
-      sem_post(&mutex);
-      sem_post(&full);
-      sem_post(&loop_mutex);
+  while (1) {                         //p0: Run forever
+    sem_wait(&loop_mutex);            //p1: Acquire the loop mutex lock (lock scope deadlock will not occur since the consumer does not use this lock).
+    if (loop < num_loops) {           //p2: Check if we have reached the number of items we want to produce.
+      loop++;                         //p3: If not, then preemptively increment the loop (in case the current thread has to wait at p5 and give up the lock).
+      sem_wait(&empty);               //p4: Wait on the buffer to be empty.
+      sem_wait(&mutex);               //p5: Acquire the buffer mutex lock.
+      int r = rand();                 //p6: Generate item to place in buffer.
+      put(r, id);                     //p7: put item in buffer.
+      sem_post(&mutex);               //p8: Release the buffer mutex lock.
+      sem_post(&full);                //p9: Signal that the buffer is now full.
+      sem_post(&loop_mutex);          //p10: Release the loop mutex lock.
     }
-    else {
-      sem_post(&loop_mutex);
-      return NULL;
+    else {                            //p11: If we have reached the number of items we want to produce, we need to break out.
+      sem_post(&loop_mutex);          //p12: Release the lock acquired at p1 to prevent terminating with lock.
+      return NULL;                    //p13: Return and join with main (terminate thread).
     }
   }
 
@@ -81,12 +80,12 @@ void *consumer(void *arg) {
 
   int tmp = 0;
   int i;
-  while (tmp != -2) {                       //c0: Run while producers are still producing (if they're not, there will be nothing to consume.)
-    sem_wait(&full);
-    sem_wait(&mutex);
-    tmp = get(id);
-    sem_post(&mutex);
-    sem_post(&empty);
+  while (tmp != -2) {                 //c0: Run while producers are still producing (if they're not, there will be nothing to consume.)
+    sem_wait(&full);                  //c1: Wait on the buffer to be full.
+    sem_wait(&mutex);                 //c2: Acquire the buffer mutex lock.
+    tmp = get(id);                    //c3: Consume the item.
+    sem_post(&mutex);                 //c4: Release the buffer mutex lock.
+    sem_post(&empty);                 //c5: Signal that the buffer is now empty.
   }
 
   return NULL;

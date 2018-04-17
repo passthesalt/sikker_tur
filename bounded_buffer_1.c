@@ -63,9 +63,8 @@ void *producer(void *arg) {
     pthread_mutex_lock(&m);                 //p1: Obtain lock before entering critical section (only the thread with the lock will be in cs).
     if (loop < num_loops) {                 //p2: Check if we have reached the number of items we want to produce.
       loop ++;                              //p3: If not, then preemptively increment the loop (in case the current thread has to wait at p5 and give up the lock).
-      while (num_entries == buffer_size) {  //p4: Check if # of entries is equal to buff_size (buff is full), if so, then wait for empty.
+      while (num_entries == buffer_size)    //p4: Check if # of entries is equal to buff_size (buff is full), if so, then wait for empty.
     	    pthread_cond_wait(&empty, &m);    //p5: Wait/block until the buffer is empty.
-    	}
       int r = rand();                       //p6: Generate item to place into buffer.
       do_fill(r, id);                       //p7: Once buffer is empty, call do_fill to enter value into buffer
       pthread_cond_signal(&fill);           //p8: Once the buffer is filled, signal that it has been filled.
@@ -86,10 +85,9 @@ void *consumer(void *arg) {
   int i;
   while (tmp != -2) {                       //c0: Run while producers are still producing (if they're not, there will be nothing to consume.)
     pthread_mutex_lock(&m);                 //c1: Obtain lock before entering cs.
-  	while (num_entries == 0) {              //c2: Check if empty, if so, then wait
+  	while (num_entries == 0)                //c2: Check if empty, if so, then wait
 	    pthread_cond_wait(&fill, &m);         //c3: Wait for the buffer to be filled
-    }
-  	tmp = do_get(id);                         //c4: Once buffer is filled, consume
+  	tmp = do_get(id);                       //c4: Once buffer is filled, consume
   	pthread_cond_signal(&empty);            //c5: Signal that buffer contents have been consumed and buff is now empty
   	pthread_mutex_unlock(&m);               //c6: Release the lock
   }
