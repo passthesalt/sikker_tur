@@ -40,8 +40,7 @@ void do_fill(int value, int id) {
   buffer[prod_ptr] = value;
   prod_ptr = (prod_ptr + 1) % buffer_size;  // Modding ptr by buffer size alleviates the need to bound the ptr to the size of the buffer
   if (value != -2)
-    printf("%d %s %d\n", id, "Produced:", loop);
-  loop++;
+    printf("%d %s %d\n", id, "Produced:", value);
   num_entries++;
 }
 
@@ -60,15 +59,21 @@ int do_get(int id) {
 void *producer(void *arg) {
   int id = (int) arg;
 
-  while (loop < num_loops) {              //p0: Run for the specified number of loops
-    pthread_mutex_lock(&m);                 //p1: Obtain lock before entering critical section (only the thread with the lock will be in cs.)
-  	while (num_entries == buffer_size) {    //p2: Check if # of entries is equal to buff_size (buff is full), if so, then wait for empty
-  	    pthread_cond_wait(&empty, &m);      //p3: Wait/block until the buffer is empty
-  	}
-    if (loop < num_loops)
-      do_fill(loop, id);                          //p4: Once buffer is empty, call do_fill to enter value into buffer (value is base + i)
-    pthread_cond_signal(&fill);             //p5: Once the buffer is filled, signal that it has been filled.
-  	pthread_mutex_unlock(&m);               //p6: Release the lock
+  while (1) {                               //p0: Run forever.
+    pthread_mutex_lock(&m);                 //p1: Obtain lock before entering critical section (only the thread with the lock will be in cs).
+    if (loop < num_loops) {                 //p2: Check if we have reached the number of items we want to produce.
+      loop ++;                              //p3: If not, then preemptively increment the loop (in case the current thread has to wait at p5 and give up the lock).
+      while (num_entries == buffer_size) {  //p4: Check if # of entries is equal to buff_size (buff is full), if so, then wait for empty.
+    	    pthread_cond_wait(&empty, &m);    //p5: Wait/block until the buffer is empty.
+    	}
+      int r = rand();                       //p6: Generate item to place into buffer.
+      do_fill(r, id);                       //p7: Once buffer is empty, call do_fill to enter value into buffer
+      pthread_cond_signal(&fill);           //p8: Once the buffer is filled, signal that it has been filled.
+    	pthread_mutex_unlock(&m);             //p9: Release the lock
+    } else {                                //p10: If we have reached the number of items we want to produce, we need to break out.
+      pthread_mutex_unlock(&m);             //p11: Release the lock acquired at p1 to prevent terminating with lock.
+      return NULL;                          //p12: Return and join with main (terminate thread).
+    }
   }
 
   return NULL;
@@ -102,6 +107,8 @@ int main(int argc, char *argv[]) {
   num_consumers = atoi(argv[2]);
   buffer_size = atoi(argv[3]);
   num_loops = atoi(argv[4]);
+
+  srand(time(NULL));
 
   // Initialize buffer
   buffer = (int *) malloc(buffer_size * sizeof(int));

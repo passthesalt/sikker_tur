@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <time.h>
 
 // Global Variables
 int num_loops = 1;
@@ -21,6 +22,7 @@ int* buffer;
 sem_t empty;
 sem_t full;
 sem_t mutex;
+sem_t loop_mutex;
 pthread_mutex_t m     = PTHREAD_MUTEX_INITIALIZER;
 
 void ensure(int expression, char *msg) {
@@ -36,7 +38,6 @@ void put(int value, int id) {
   prod_ptr = (prod_ptr + 1) % buffer_size;  // Modding ptr by buffer size alleviates the need to bound the ptr to the size of the buffer
   if (value != -2)
     printf("%d %s %d\n", id, "Produced:", value);
-  loop++;
 }
 
 int get(int id) {
@@ -54,13 +55,22 @@ void *producer(void *arg) {
   int id = (int) arg;
 
   int i;
-  while (loop < num_loops) {         //p0: Run for the specified number of loops
-    sem_wait(&empty);
-    sem_wait(&mutex);
-    if (loop < num_loops)
-      put(loop, id);
-    sem_post(&mutex);
-    sem_post(&full);
+  while (1) {                         //p0: Run for the specified number of loops
+    sem_wait(&loop_mutex);
+    if (loop < num_loops) {
+      loop++;
+      sem_wait(&empty);
+      sem_wait(&mutex);
+      int r = rand();
+      put(r, id);
+      sem_post(&mutex);
+      sem_post(&full);
+      sem_post(&loop_mutex);
+    }
+    else {
+      sem_post(&loop_mutex);
+      return NULL;
+    }
   }
 
   return NULL;
@@ -104,6 +114,9 @@ int main(int argc, char *argv[]) {
   sem_init(&empty, 0, buffer_size);  // all entries are empty
   sem_init(&full, 0, 0);             // None of entries are full
   sem_init(&mutex, 0, 1);            // Binary semaphore
+  sem_init(&loop_mutex, 0 ,1);       // Binary semaphore
+
+  srand(time(NULL));
 
   pthread_t pid[num_producers], cid[num_consumers];
   int thread_id = 0;
